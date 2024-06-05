@@ -13,7 +13,7 @@ Processing RPKI data with rpki-client:
 Use the schema.sql to create your database and index for best speed on queries.
 Hints on loading data are in the load.sql file.
 
-More breadcrums: pgsql_history.txt with everything I did (repeatedly) to get some insights from this data.
+More bread crumibs: pgsql_history.txt with everything I did (repeatedly) to get some insights from this data.
 
 Go hear for the presentation on this data: https://2024.apricot.net/assets/files/APIC378/bcp1851708914211_1708995978.pdf
 
