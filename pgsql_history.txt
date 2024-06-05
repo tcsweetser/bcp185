@@ -1,0 +1,500 @@
+\q
+\copy
+\h copy
+select * from routes ;
+insert into routes (dumptype,exported,protocol,nexthop,asn,prefix,aspath,origin)values('TABLE_DUMP2','02/07/24 04:00:00','B','2a02:d140:1::60','49788','2001::/32','49788 12552 6939','IGP');
+copy routes to 'testdump'l;
+copy routes to 'testdump';
+copy routes to '/tmp/testdump';
+\q
+copy routes from '/home/apnic/data/rib.20240207.0400.txt';
+\q
+copy routes from '/tmp/data';
+copy routes from '/tmp/data' (delimiter('|'));
+\df *vers*
+\df *fam*
+select *,family(prefix) from routes limit 10;
+select * from routes where family(prefix)=4;
+\q
+truncate routes ;
+\q
+copy routes from '/tmp/data' (delimiter('|'));
+select * from routes where family(prefix)=4;
+\q
+select count(*),family(prefix) from routes group by 2;
+create table allocated (rir text, economy_iso varchar(2), family varchar(4), prefix inet, size integer, allocation_date text, allocation_status text);
+create index on allocated (inet_ops prefix);
+create index on allocated as gist (inet_ops prefix);
+create index on allocated gist (inet_ops prefix);
+\q
+create index on allocated using gist (inet_ops prefix);
+create index on allocated using gist (prefix inet_ops);
+create index on allocated (rir);
+create index on allocated (economy_iso);
+\q
+create table("ASN" text,"IP Prefix" cide,"Max Length" integer,"Trust Anchor" text,"Expires" bigint);
+create table rpki_signed_routes("ASN" text,"IP Prefix" cide,"Max Length" integer,"Trust Anchor" text,"Expires" bigint);
+create table rpki_signed_routes("ASN" text,"IP Prefix" cidr,"Max Length" integer,"Trust Anchor" text,"Expires" bigint);
+create index on rpki_signed_routes ("ASN");
+create index on rpki_signed_routes ("Trust Anchor");
+create index on rpki_signed_routes using gist("IP Prefix" inet_ops);
+\q
+copy rpki_signed_routes from '/tmp/roas' with csv header ;
+\q
+copy allocated from '/tmp/assignments' (delimiter('|'));
+\d+ allocated
+alter table allocated add column extended text;
+copy allocated from '/tmp/assignments' (delimiter('|'));
+\q
+copy allocated from '/tmp/assignments' (delimiter('|'));
+\d+ allocated
+\q
+alter table allocated rename to rir_allocations;
+\dt
+\q
+\dt
+\d+
+\d+ routes
+\e
+create or replace function subnets (net cidr, len int)returns table (networks cidr)language plpgsqlas $$begin    if masklen(cidr) < len then        return query select subnets(set_masklen(cidr,len+1),len);        return query select subnets(set_masklen(broascast(cidr)+1,len+1),len);    end if;    return query select cidr;end $$;
+select * from subnets('192.168.0.0/16'::cidr,24);
+create or replace function subnets (net cidr, len int)returns table (networks cidr)language plpgsqlas $$begin    if masklen(cidr::inet) < len then        return query select subnets(set_masklen(cidr,len+1),len);        return query select subnets(set_masklen(broascast(cidr)+1,len+1),len);    end if;    return query select cidr;end $$;
+select * from subnets('192.168.0.0/16'::cidr,24);
+create or replace function subnets (net cidr, len int)returns table (networks cidr)language plpgsqlas $$begin    if masklen(cidr::inet) < len then        return query select subnets(set_masklen(cidr,len+1),len);        return query select subnets(set_masklen(broascast(cidr)+1,len+1),len);    end if;    return query select cidr;end $$;
+\e
+create or replace function subnets (net cidr, len int)returns table (networks cidr)language plpgsqlas $$begin    if masklen(net) < len then        return query select subnets(set_masklen(cidr,len+1),len);        return query select subnets(set_masklen(broascast(cidr)+1,len+1),len);    end if;    return query select cidr;end $$;
+select * from subnets('192.168.0.0/16'::cidr,24);
+create or replace function subnets (net cidr, len int)returns table (networks cidr)language plpgsqlas $$begin    if masklen(net) < len then        return query select subnets(set_masklen(cidr,len+1),len);        return query select subnets(set_masklen(broascast(cidr)+1,len+1),len);    end if;    return query select cidr;end $$;
+\e
+create or replace function subnets (nw cidr, len int)returns table (networks cidr)language plpgsqlas $$begin    if masklen(nw) <= len then        return query select subnets(set_masklen(nw,len+1),len);        return query select subnets(set_masklen(broascast(nw)+1,len+1),len);    end if;    return query select nw;end $$;
+select * from subnets('192.168.0.0/16'::cidr,24);
+create or replace function subnets (nw cidr, len int)returns table (networks inet)language plpgsqlas $$begin    if masklen(nw) <= len then        return query select subnets(set_masklen(nw,len+1),len);        return query select subnets(set_masklen(broascast(nw)+1,len+1),len);    end if;    return query select nw;end $$;
+select * from subnets('192.168.0.0/16'::cidr,24);
+create or replace function subnets (nw cidr, len int)returns table (networks inet)language plpgsqlas $$begin    if masklen(nw) <= len then        return query select subnets(set_masklen(nw,len+1),len);        return query select subnets(set_masklen(broascast(nw)+1,len+1),len);    end if;    return query select nw;end $$;
+create or replace function subnets (nw cidr, len int)returns table (networks cidr)language plpgsqlas $$begin    if masklen(nw) <= len then        return query select subnets(set_masklen(nw,len+1),len);        return query select subnets(set_masklen(broascast(nw)+1,len+1),len);    end if;    return query select nw;end $$;
+drop function subnets(cidr,integer) ;
+create or replace function subnets (nw cidr, len int)returns table (networks cidr)language plpgsqlas $$begin    if masklen(nw) <= len then        return query select subnets(set_masklen(nw,len+1),len);        return query select subnets(set_masklen(broascast(nw)+1,len+1),len);    end if;    return query select nw;end $$;
+select * from subnets('192.168.0.0/16'::cidr,24);
+create or replace function subnets (nw cidr, len int)returns table (networks cidr)language plpgsqlas $$begin    if masklen(nw) <= len then        return query select subnets(set_masklen(nw,len+1)::cidr,len);        return query select subnets(set_masklen(broascast(nw)+1,len+1)::cidr,len);    end if;    return query select nw;end $$;
+select * from subnets('192.168.0.0/16'::cidr,24);
+create or replace function subnets (nw cidr, len int)returns table (networks cidr)language plpgsqlas $$begin    if masklen([Bnw) <= len then        return query select subnets(set_masklen(nw,len+1)::cidr,len);        return query select subnets(set_masklen(broadcast(nw)+1,len+1)::cidr,len);    end if;    return query select nw;end $$;
+select * from subnets('192.168.0.0/16'::cidr,24);
+create or replace function subnets (nw cidr, len int)returns table (networks cidr)language plpgsqlas $$begin    if masklen(nw) <= len then        return query select subnets(set_masklen(nw,len+1)::cidr,len);        return query select subnets(set_masklen(broascast(nw)+1,len+1)::cidr,len);    end if;    return query select nw;end $$;
+\e
+create or replace function subnets (nw cidr, len int)returns table (networks cidr)language plpgsqlas $$begin    if masklen(nw) < len then        return query select subnets(set_masklen(nw,len+1)::cidr,len);        return query select subnets(set_masklen(broascast(nw)+1,len+1)::cidr,len);    end if;    return query select nw;end $$;
+create or replace function subnets (nw cidr, len int)returns table (networks cidr)language plpgsqlas $$begin    if masklen(nw) < len then        return query select subnets(set_masklen(nw,len+1)::cidr,len);        return query select subnets(set_masklen(broascast(nw)+1,len+1)::cidr,len);    end if;    return query select nw;end $$;
+\e
+create or replace function subnets (nw cidr, len int)returns table (networks cidr)language plpgsqlas $$begin    if masklen(nw) < len then        return query select subnets(set_masklen(nw,len+1)::cidr,len);        return query select subnets(set_masklen(broascast(nw)+1,len+1)::cidr,len);    end if;    return query select nw;end $$;
+select * from subnets('192.168.0.0/16'::cidr,24);
+create or replace function subnets (nw cidr, len int)returns table (networks cidr)language plpgsqlas $$begin    if masklen(nw) < len then        return query select subnets(set_masklen(nw,len+1)::cidr,len);        return query select subnets(set_masklen(broadcast(nw)+1,len+1)::cidr,len);    end if;    return query select nw;end $$;
+select * from subnets('192.168.0.0/16'::cidr,24);
+create or replace function subnets (nw cidr, len int)returns table (networks cidr)language plpgsqlas $$begin    if masklen(nw) < len then        return query select subnets(set_masklen(nw,len+1)::cidr,len);        return query select subnetsxd_masklen(broadcast(nw)+1,len+1)::cidr,len);    end if;    return query select nw;end $$;
+\e
+create or replace function subnets (nw cidr, len int)returns table (networks cidr)language plpgsqlas $$begin    if masklen(nw) < len then        return query select subnets(set_masklen(nw,len+1)::cidr,len);    end if;    return query select nw;end $$;
+select * from subnets('192.168.0.0/16'::cidr,24);
+create or replace function subnets (nw cidr, len int)returns table (networks cidr)language plpgsqlas $$begin    if masklen(nw) < len then        return query select subnets(set_masklen(nw,len+1)::cidr,len);    end if;    return query select nw;end $$;
+\e
+create or replace function subnets (nw cidr, len int)returns table (networks cidr)language plpgsqlas $$begin    return query select nw;    if masklen(nw) < len then        return query select subnets(set_masklen(nw,len+1)::cidr,len);    end if;end $$;
+select * from subnets('192.168.0.0/16'::cidr,24);
+create or replace function subnets (nw cidr, len int)returns table (networks cidr)language plpgsqlas $$begin    if masklen(nw) < len then        return query select subnets(set_masklen(nw,len+1)::cidr,len);    end if;    return query select nw;end $$;
+\e
+create or replace function subnets (nw cidr, len int)returns table (networks cidr)language plpgsqlas $$begin  if masklen(nw) == len then return; end if;  return query select subnets(set_masklen(nw,len+1)::cidr,len);  return query select subnets(set_masklen(nw,len+1)::cidr,len);end $$;
+select * from subnets('192.168.0.0/16'::cidr,24);
+create or replace function subnets (nw cidr, len int)returns table (networks cidr)language plpgsqlas $$begin  if masklen(nw) = len then return; end if;  return query select subnets(set_masklen(nw,len+1)::cidr,len);  return query select subnets(set_masklen(nw,len+1)::cidr,len);end $$;
+select * from subnets('192.168.0.0/16'::cidr,24);
+create or replace function subnets (nw cidr, len int)returns table (networks cidr)language plpgsqlas $$begin  if masklen(nw) = len then return; end if;  return query select subnets(set_masklen(nw,len+1)::cidr,len);  return query select subnets(set_masklen(nw,len+1)::cidr,len);end $$;
+\e
+create or replace function subnets (nw cidr, len int)returns table (networks cidr)language plpgsqlas $$begin  if masklen(nw) = len then return; end if;  return query select subnets(set_masklen(nw,len+1)::cidr,len);end $$;
+select * from subnets('192.168.0.0/16'::cidr,24);
+CREATE OR REPLACE FUNCTION split_cidr(net cidr, exc inet) returns setof cidr language plpgsql AS $$DECLARE  r cidr;  lower cidr;  upper cidr;BEGIN  IF masklen(net) >= 32 THEN RETURN; END IF;  lower = set_masklen(net, masklen(net)+1);  upper = set_masklen( (lower | ~ netmask(lower)) + 1, masklen(lower));  IF exc << upper THEN    RETURN NEXT lower;    FOR r IN SELECT * from split_cidr(upper, exc)    LOOP RETURN NEXT r;    END LOOP;  ELSE    FOR r IN SELECT * from split_cidr(lower, exc)    LOOP RETURN NEXT r;    END LOOP;    RETURN NEXT upper;  END IF;  RETURN;END $$;
+select * from split_cidr('192.168.0.0/16'::cidr,24);
+select split_cidr('192.168.0.0/16'::cidr,24);
+CREATE OR REPLACE FUNCTION split_cidr(net cidr, exc inet) returns setof cidr language plpgsql AS $$DECLARE  r cidr;  lower cidr;  upper cidr;BEGIN  IF masklen(net) >= 32 THEN RETURN; END IF;  lower = set_masklen(net, masklen(net)+1);  upper = set_masklen( (lower | ~ netmask(lower)) + 1, masklen(lower));  IF exc << upper THEN    RETURN NEXT lower;    FOR r IN SELECT * from split_cidr(upper, exc)    LOOP RETURN NEXT r;    END LOOP;  ELSE    FOR r IN SELECT * from split_cidr(lower, exc)    LOOP RETURN NEXT r;    END LOOP;    RETURN NEXT upper;  END IF;  RETURN;END $$;
+\e
+CREATE OR REPLACE FUNCTION split_cidr(net cidr, exc integer) returns setof cidr language plpgsql AS $$DECLARE  r cidr;  lower cidr;  upper cidr;BEGIN  IF masklen(net) > exc THEN RETURN; END IF;  lower = set_masklen(net, masklen(net)+1);  upper = set_masklen( (lower | ~ netmask(lower)) + 1, masklen(lower));  RETURN NEXT lower;  FOR r IN SELECT * from split_cidr(upper, exc)  LOOP RETURN NEXT r;  END LOOP;  FOR r IN SELECT * from split_cidr(lower, exc)  LOOP RETURN NEXT r;  END LOOP;  RETURN NEXT upper;  RETURN;END $$;
+select split_cidr('192.168.0.0/16'::cidr,24);
+select * from split_cidr('192.168.0.0/16'::cidr,24) order by 1;
+CREATE OR REPLACE FUNCTION split_cidr(net cidr, exc integer) returns setof cidr language plpgsql AS $$DECLARE  r cidr;  lower cidr;  upper cidr;BEGIN  IF masklen(net) >= exc THEN RETURN; END IF;  lower = set_masklen(net, masklen(net)+1);  upper = set_masklen( (lower | ~ netmask(lower)) + 1, masklen(lower));  RETURN NEXT lower;  FOR r IN SELECT * from split_cidr(upper, exc)  LOOP RETURN NEXT r;  END LOOP;  FOR r IN SELECT * from split_cidr(lower, exc)  LOOP RETURN NEXT r;  END LOOP;  RETURN NEXT upper;  RETURN;END $$;
+select * from split_cidr('192.168.0.0/16'::cidr,24) order by 1;
+CREATE OR REPLACE FUNCTION split_cidr(net cidr, exc integer) returns setof cidr language plpgsql AS $$DECLARE  r cidr;  lower cidr;  upper cidr;BEGIN  IF masklen(net) >= exc THEN RETURN; END IF;  lower = set_masklen(net, masklen(net)+1);  upper = set_masklen( (lower | ~ netmask(lower)) + 1, masklen(lower));  RETURN NEXT lower;  FOR r IN SELECT * from split_cidr(upper, exc)  LOOP RETURN NEXT r;  END LOOP;  FOR r IN SELECT * from split_cidr(lower, exc)  LOOP RETURN NEXT r;  END LOOP;  RETURN NEXT upper;  RETURN;END $$;
+\e
+CREATE OR REPLACE FUNCTION split_cidr(net cidr, exc integer) returns setof cidr language plpgsql AS $$DECLARE  r cidr;  lower cidr;  upper cidr;BEGIN  IF masklen(net) >= exc THEN RETURN; END IF;  lower = set_masklen(net, masklen(net)+1);  upper = set_masklen( (lower | ~ netmask(lower)) + 1, masklen(lower));  RETURN NEXT lower;  FOR r IN SELECT * from split_cidr(upper, exc)  LOOP RETURN NEXT r;  END LOOP;  FOR r IN SELECT * from split_cidr(lower, exc)  LOOP RETURN NEXT r;  END LOOP;  RETURN NEXT upper;  RETURN NEXT net;END $$;
+select * from split_cidr('192.168.0.0/16'::cidr,24) order by 1;
+select distinct * from split_cidr('192.168.0.0/16'::cidr,24) order by 1;
+CREATE OR REPLACE FUNCTION split_cidr(net cidr, exc integer) returns setof cidr language plpgsql AS $$DECLARE  r cidr;  lower cidr;  upper cidr;BEGIN  IF masklen(net) >= exc THEN RETURN; END IF;  lower = set_masklen(net, masklen(net)+1);  upper = set_masklen( (lower | ~ netmask(lower)) + 1, masklen(lower));  RETURN NEXT lower;  FOR r IN SELECT * from split_cidr(upper, exc)  LOOP RETURN NEXT r;  END LOOP;  FOR r IN SELECT * from split_cidr(lower, exc)  LOOP RETURN NEXT r;  END LOOP;  RETURN NEXT upper;  RETURN NEXT net;END $$;
+\e
+CREATE OR REPLACE FUNCTION split_cidr(net cidr, exc integer) returns setof cidr language plpgsql AS $$DECLARE  r cidr;  lower cidr;  upper cidr;BEGIN  IF masklen(net) >= exc THEN RETURN; END IF;  lower = set_masklen(net, masklen(net)+1);  upper = set_masklen( (lower | ~ netmask(lower)) + 1, masklen(lower));  RETURN NEXT net;  FOR r IN SELECT * from split_cidr(upper, exc)  LOOP RETURN NEXT r;  END LOOP;  FOR r IN SELECT * from split_cidr(lower, exc)  LOOP RETURN NEXT r;  END LOOP;  RETURN;END $$;
+select distinct * from split_cidr('192.168.0.0/16'::cidr,24) order by 1;
+CREATE OR REPLACE FUNCTION split_cidr(net cidr, exc integer) returns setof cidr language plpgsql AS $$DECLARE  r cidr;  lower cidr;  upper cidr;BEGIN  IF masklen(net) > exc THEN RETURN; END IF;  lower = set_masklen(net, masklen(net)+1);  upper = set_masklen( (lower | ~ netmask(lower)) + 1, masklen(lower));  RETURN NEXT net;  FOR r IN SELECT * from split_cidr(upper, exc)  LOOP RETURN NEXT r;  END LOOP;  FOR r IN SELECT * from split_cidr(lower, exc)  LOOP RETURN NEXT r;  END LOOP;  RETURN;END $$;
+select distinct * from split_cidr('192.168.0.0/16'::cidr,24) order by 1;
+select distinct * from split_cidr('2001:DB9::/32'::cidr,40) order by 1;
+\d+ rpki_signed_routes 
+select *,split_cidr("IP Prefix","Max Length") from rpki_signed_routes ;
+select * from rpki_signed_routes where family("IP Prefix")=4 and masklen("IP Prefix")>32l;
+select * from rpki_signed_routes where family("IP Prefix")=4 and masklen("IP Prefix")>32;
+select * from rpki_signed_routes where family("IP Prefix")=4 and "Max Length">32;
+select * from rpki_signed_routes where family("IP Prefix")=6 and "Max Length">32;
+\d+ rpki_signed_routes 
+select *,split_cidr("IP Prefix","Max Length") from rpki_signed_routes ;
+CREATE OR REPLACE FUNCTION split_cidr(net cidr, exc integer) returns setof cidr language plpgsql AS $$DECLARE  r cidr;  lower cidr;  upper cidr;BEGIN  IF masklen(net) > exc THEN RETURN; END IF;  lower = set_masklen(net, masklen(net)+1);  upper = set_masklen( (lower | ~ netmask(lower)) + 1, masklen(lower));  RETURN NEXT net;  FOR r IN SELECT * from split_cidr(upper, exc)  LOOP RETURN NEXT r;  END LOOP;  FOR r IN SELECT * from split_cidr(lower, exc)  LOOP RETURN NEXT r;  END LOOP;  RETURN;END $$;
+\e
+CREATE OR REPLACE FUNCTION split_cidr(net cidr, exc integer) returns setof cidr language plpgsql AS $$DECLARE  r cidr;  lower cidr;  upper cidr;BEGIN  IF masklen(net) > 24 AND family(net) = 4 THEN RETURN; END IF;  IF masklen(net) > 48 AND family(net) = 6 THEN RETURN; END IF;  IF masklen(net) > exc THEN RETURN; END IF;  lower = set_masklen(net, masklen(net)+1);  upper = set_masklen( (lower | ~ netmask(lower)) + 1, masklen(lower));  RETURN NEXT net;  FOR r IN SELECT * from split_cidr(upper, exc)  LOOP RETURN NEXT r;  END LOOP;  FOR r IN SELECT * from split_cidr(lower, exc)  LOOP RETURN NEXT r;  END LOOP;  RETURN;END $$;
+select *,split_cidr("IP Prefix","Max Length") from rpki_signed_routes ;
+\q
+create table expanded_signed_routes as select *,split_cidr("IP Prefix","Max Length") from rpki_signed_routes;
+\q
+select * from rpki_signed_routes where "Max Length" = 128;
+select "Trust Anchor",count(distinct "ASN") from rpki_signed_routes where "Max Length" = 128 group by 1 order by 2;
+select "Trust Anchor",count(distinct "ASN") from rpki_signed_routes where "Max Length" = 128 group by 1 order by 2 desc;
+select "Trust Anchor",count(distinct "ASN") from rpki_signed_routes where family("IP Address")=6 and "Max Length" = 128 group by 1 order by 2 desc;
+\d+ rpki_signed_routes 
+select "Trust Anchor",count(distinct "ASN") from rpki_signed_routes where family("IP Prefix")=6 and "Max Length" = 128 group by 1 order by 2 desc;
+select "Trust Anchor",count(distinct "ASN") from rpki_signed_routes where family("IP Prefix")=4 and "Max Length" = 32 group by 1 order by 2 desc;
+\e
+select "Trust Anchor",count(distinct "ASN")from rpki_signed_routeswhere family("IP Prefix")=6 and "Max Length" = 128 group by 1 order by 2 desc;
+\e
+select "Trust Anchor",count(distinct "ASN")from rpki_signed_routeswhere family("IP Prefix")=6 and "Max Length" = 128group by 1 order by 2 desc;
+select "Trust Anchor",count(distinct "ASN")from rpki_signed_routeswhere family("IP Prefix")=6 and "Max Length" = 128group by 1 order by 2 desc;
+select "Trust Anchor",count(distinct "ASN")from rpki_signed_routeswhere family("IP Prefix")=4 and "Max Length" = 32group by 1 order by 2 desc;
+SHOW data_directory;
+\q
+\d+
+drop table expanded_signed_routes ;
+\q
+\df
+drop function split_cidr(net cidr, exc inet);
+drop function subnets(nw cidr, len integer);
+select count(*) from split_cidr('192.168.0.0/16'::inet,24);
+select count(*) from split_cidr('192.168.0.0/16'::cidr,24);
+select * from split_cidr('192.168.0.0/16'::cidr,24);
+\d+ 
+select A."ASN",B."ASN",A."IP Prefix",B."IP Prefix" from rpki_signed_routes A join rpki_signed_routes B on A."IP Prefix" << B."IP Prefix";
+select A."ASN",B."ASN",A."IP Prefix",B."IP Prefix" from rpki_signed_routes A join rpki_signed_routes B on A."IP Prefix" << B."IP Prefix" and A."Max Length" <= masklen(B."IP Prefix");
+create index on rpki_signed_routes (masklen("IP Prefix"));
+select A."ASN",B."ASN",A."IP Prefix",B."IP Prefix" from rpki_signed_routes A join rpki_signed_routes B on A."IP Prefix" << B."IP Prefix" and masklen(A."IP Prefix") <= B."Max Length";
+select A."ASN" as asn_subnet,B."ASN" as asn_supernet,A."IP Prefix" as subnet,A."Max Length" as subnet_maxlen,B."IP Prefix" as supernet,B."Max Length" as supernet_maxlen from rpki_signed_routes A join rpki_signed_routes B on A."IP Prefix" << B."IP Prefix" and masklen(A."IP Prefix") <= B."Max Length";
+\d+ array_accum
+select array_agg(A."ASN") as asns_subnet,array_agg(B."ASN") as asns_supernet,A."IP Prefix" as subnet,A."Max Length" as subnet_maxlen,B."IP Prefix" as supernet,B."Max Length" as supernet_maxlen from rpki_signed_routes A join rpki_signed_routes B on A."IP Prefix" << B."IP Prefix" and masklen(A."IP Prefix") <= B."Max Length" group by 3,4,5,6;
+select array_agg(distinct A."ASN") as asns_subnet,array_agg(distinct B."ASN") as asns_supernet,A."IP Prefix" as subnet,A."Max Length" as subnet_maxlen,B."IP Prefix" as supernet,B."Max Length" as supernet_maxlen from rpki_signed_routes A join rpki_signed_routes B on A."IP Prefix" << B."IP Prefix" and masklen(A."IP Prefix") <= B."Max Length" group by 3,4,5,6;
+create materialized view overlapping_signed_routres as select array_agg(distinct A."ASN") as asns_subnet,array_agg(distinct B."ASN") as asns_supernet,A."IP Prefix" as subnet,A."Max Length" as subnet_maxlen,B."IP Prefix" as supernet,B."Max Length" as supernet_maxlen from rpki_signed_routes A join rpki_signed_routes B on A."IP Prefix" << B."IP Prefix" and masklen(A."IP Prefix") <= B."Max Length" group by 3,4,5,6;
+\d+
+\d+ overlapping_signed_routres 
+create index on overlapping_signed_routres using gist(inetops supernet);
+create index on overlapping_signed_routres using gist(supernet inetops);
+create index on overlapping_signed_routres using gist(inet_ops supernet);
+create index on overlapping_signed_routres  using gist(supernet inet_ops);
+alter materialized view overlapping_signed_routres rename to overlapping_signed_routes;
+\dt
+\d+
+select "IP Prefix" as subnet, "Max Length" as maxlen,count(split_cidr("IP Prefix","Max Length")) from rpki_signed_routes group by 1,2 order by 1,2;
+select "IP Prefix" as subnet, "Max Length" as maxlen,split_cidr("IP Prefix","Max Length") from rpki_signed_routes group by 1,2,3;
+select subnet as supernet,maxlen,count(expanded) as num_subnets   from(select "IP Prefix" as subnet, "Max Length" as maxlen,split_cidr("IP Prefix","Max Length") as expanded from rpki_signed_routes group by 1,2,3) a group by 1,2;
+create materialized view signed_routes_expanded_counts as select subnet as supernet,maxlen,count(expanded) as num_subnets   from(select "IP Prefix" as subnet, "Max Length" as maxlen,split_cidr("IP Prefix","Max Length") as expanded from rpki_signed_routes group by 1,2,3) a group by 1,2;
+explain analyze select subnet as supernet,maxlen,count(expanded) as num_subnets   from(select "IP Prefix" as subnet, "Max Length" as maxlen,split_cidr("IP Prefix","Max Length") as expanded from rpki_signed_routes group by 1,2,3) a group by 1,2;
+explain analyze select "IP Prefix" as subnet, "Max Length" as maxlen,count(split_cidr("IP Prefix","Max Length")) from rpki_signed_routes ;
+explain analyze select "IP Prefix" as subnet, "Max Length" as maxlen,array_length(split_cidr("IP Prefix","Max Length"),1) from rpki_signed_routes ;
+explain analyze select "IP Prefix" as subnet, "Max Length" as maxlen,array_length(array(split_cidr("IP Prefix","Max Length")),1) from rpki_signed_routes ;
+explain analyze select "IP Prefix" as subnet, "Max Length" as maxlen,array_length(array_agg(split_cidr("IP Prefix","Max Length")),1) from rpki_signed_routes ;
+explain analyze select "IP Prefix" as subnet, "Max Length" as maxlen,array_length(array(select * from split_cidr("IP Prefix","Max Length")),1) from rpki_signed_routes ;
+\q
+\df+ split_cidr 
+\df split_cidr 
+\df+ split_cidr 
+\q
+\d+ 
+select * from rir_allocations ;
+select rir,economy_iso,prefix from rir_allocations where family='ipv4';
+select * from rir_allocations ;
+select * from rir_allocations limit 25;
+select * from rir_allocations limit 25;
+select rir,economy_iso,prefix,log(size)/log(2) from rir_allocations where family='ipv4';
+select rir,economy_iso,prefix,(32-(log(size)/log(2))::integer) from rir_allocations where family='ipv4';
+select rir,economy_iso,prefix::text||'/'||(32-(log(size)/log(2))::integer)::varchar from rir_allocations where family='ipv4';
+select rir,economy_iso,prefix||'/'||(32-(log(size)/log(2))::integer)::varchar from rir_allocations where family='ipv4';
+select rir,economy_iso,set_masklen(prefix::cidr,(32-(log(size)/log(2))::integer) from rir_allocations where family='ipv4';);
+\e
+select rir,economy_iso,set_masklen(prefix::cidr,(32-(log(size)/log(2))::integer)) from rir_allocations where family='ipv4';
+select rir,economy_iso,set_masklen(prefix::cidr,(32-(log(size)/log(2))::integer)) as prefix from rir_allocations where family='ipv4';
+create table _geocode_subnet_data as select rir,economy_iso,set_masklen(prefix::cidr,(32-(log(size)/log(2))::integer)) as prefix from rir_allocations where family='ipv4';
+create index on _geocode_subnet_data using gist(prefix inet_ops);
+create index on _geocode_subnet_data (rir);
+create index on _geocode_subnet_data (economy_iso);
+\d+ _geocode_subnet_data
+select rir,economy_iso,set_masklen(prefix::cidr,size::integer) as prefix from rir_allocations where family='ipv6';
+insert into _geocode_subnet_data select rir,economy_iso,set_masklen(prefix::cidr,size::integer) as prefix from rir_allocations where family='ipv6';
+select * from _geocode_subnet_data ;
+\dt
+\dt
+\dt+
+\q
+CREATE FUNCTION public.split_cidr(net cidr, exc integer) RETURNS SETOF cidr    LANGUAGE plpgsql    AS $$DECLARE  r cidr;  lower cidr;  upper cidr;BEGIN  IF masklen(net) > 24 AND family(net) = 4 THEN RETURN; END IF;  IF masklen(net) > 48 AND family(net) = 6 THEN RETURN; END IF;  IF masklen(net) > exc THEN RETURN; END IF;  lower = set_masklen(net, masklen(net)+1);  upper = set_masklen( (lower | ~ netmask(lower)) + 1, masklen(lower));  RETURN NEXT net;  FOR r IN SELECT * from split_cidr(upper, exc)  LOOP RETURN NEXT r;  END LOOP;  FOR r IN SELECT * from split_cidr(lower, exc)  LOOP RETURN NEXT r;  END LOOP;  RETURN;END $$;
+\e
+CREATE OR REPLACE FUNCTION split_cidr_count(net cidr, exc integer) RETURNS BIGINT    LANGUAGE plpgsql    AS $$DECLARE  l integer;  ml integer;BEGIN  IF family(net) = 4 THEN	ml = masklen(net);	if exc > 24 THEN		l = ml - 24;	ELSE		l = ml - exc;	END IF;  END IF;  IF family(net) = 6 THEN	ml = masklen(net);	if exc > 48 THEN		l = ml - 48;	ELSE		l = ml - exc;	END IF;  END IF;  RETURN (2^l)-1;END $$;
+explain analyze select "IP Prefix" as subnet, "Max Length" as maxlen,split_cidr_count("IP Prefix","Max Length") from rpki_signed_routes ;
+CREATE OR REPLACE FUNCTION split_cidr_count(net cidr, exc integer) RETURNS BIGINT    LANGUAGE plpgsql    AS $$DECLARE  l integer;  ml integer;BEGIN  IF family(net) = 4 THEN	ml = masklen(net);	if exc > 24 THEN		l = ml - 24;	ELSE		l = ml - exc;	END IF;  END IF;  IF family(net) = 6 THEN	ml = masklen(net);	if exc > 48 THEN		l = ml - 48;	ELSE		l = ml - exc;	END IF;  END IF;  RETURN (2^l)-1;END $$;
+\e
+CREATE OR REPLACE FUNCTION split_cidr_count(net cidr, exc integer) RETURNS BIGINT    LANGUAGE plpgsql    AS $$DECLARE  l integer;  ml integer;BEGIN	RAISE NOTE "l = %" l;  IF family(net) = 4 THEN	ml = masklen(net);	if exc > 24 THEN		l = ml - 24;	ELSE		l = ml - exc;	END IF;  END IF;  IF family(net) = 6 THEN	ml = masklen(net);	if exc > 48 THEN		l = ml - 48;	ELSE		l = ml - exc;	END IF;  END IF;  RETURN (2^l)-1;END $$;
+explain analyze select "IP Prefix" as subnet, "Max Length" as maxlen,split_cidr_count("IP Prefix","Max Length") from rpki_signed_routes ;
+CREATE OR REPLACE FUNCTION split_cidr_count(net cidr, exc integer) RETURNS BIGINT    LANGUAGE plpgsql    AS $$DECLARE  l integer;  ml integer;BEGIN  IF family(net) = 4 THEN	ml = masklen(net);	if exc > 24 THEN		l = ml - 24;	ELSE		l = ml - exc;	END IF;  END IF;  IF family(net) = 6 THEN	ml = masklen(net);	if exc > 48 THEN		l = ml - 48;	ELSE		l = ml - exc;	END IF;  END IF;  RETURN (2^l)-1;END $$;
+\df
+select split_cidr_count('192.168.0.0/16'::cidr,24);
+CREATE OR REPLACE FUNCTION split_cidr_count(net cidr, exc integer) RETURNS BIGINT    LANGUAGE plpgsql    AS $$DECLARE  l integer;  ml integer;BEGIN  IF family(net) = 4 THEN	ml = masklen(net);	if exc > 24 THEN		l = ml - 24;	ELSE		l = ml - exc;	END IF;  END IF;  IF family(net) = 6 THEN	ml = masklen(net);	if exc > 48 THEN		l = ml - 48;	ELSE		l = ml - exc;	END IF;  END IF;  RETURN (2^l)-1;END $$;
+\e
+CREATE OR REPLACE FUNCTION split_cidr_count(net cidr, exc integer) RETURNS BIGINT    LANGUAGE plpgsql    AS $$DECLARE  l integer;  ml integer;BEGINml = masklen(net);  IF family(net) = 4 THEN	if exc > 24 THEN		l = ml - 24;	ELSE		l = ml - exc;	END IF;  END IF;  IF family(net) = 6 THEN	if exc > 48 THEN		l = ml - 48;	ELSE		l = ml - exc;	END IF;  END IF;  RETURN l;END $$;
+select split_cidr_count('192.168.0.0/16'::cidr,24);
+CREATE OR REPLACE FUNCTION split_cidr_count(net cidr, exc integer) RETURNS BIGINT    LANGUAGE plpgsql    AS $$DECLARE  l integer;  ml integer;BEGINml = masklen(net);  IF family(net) = 4 THEN	if exc > 24 THEN		l = ml - 24;	ELSE		l = ml - exc;	END IF;  END IF;  IF family(net) = 6 THEN	if exc > 48 THEN		l = ml - 48;	ELSE		l = ml - exc;	END IF;  END IF;  RETURN l;END $$;
+\e
+CREATE OR REPLACE FUNCTION split_cidr_count(net cidr, exc integer) RETURNS BIGINT    LANGUAGE plpgsql    AS $$DECLARE  l integer;  ml integer;BEGINml = masklen(net);  IF family(net) = 4 THEN	if exc > 24 THEN		l = 24 - ml;	ELSE		l = exc - ml;	END IF;  END IF;  IF family(net) = 6 THEN	if exc > 48 THEN		l = 48 - ml;	ELSE		l = exc - ml;	END IF;  END IF;  RETURN l;END $$;
+select split_cidr_count('192.168.0.0/16'::cidr,24);
+CREATE OR REPLACE FUNCTION split_cidr_count(net cidr, exc integer) RETURNS BIGINT    LANGUAGE plpgsql    AS $$DECLARE  l integer;  ml integer;BEGINml = masklen(net);  IF family(net) = 4 THEN	if exc > 24 THEN		l = ml - 24;	ELSE		l = ml - exc;	END IF;  END IF;  IF family(net) = 6 THEN	if exc > 48 THEN		l = ml - 48;	ELSE		l = ml - exc;	END IF;  END IF;  RETURN l;END $$;
+\e
+CREATE OR REPLACE FUNCTION split_cidr_count(net cidr, exc integer) RETURNS BIGINT    LANGUAGE plpgsql    AS $$DECLARE  l integer;  ml integer;BEGINml = masklen(net);  IF family(net) = 4 THEN	if exc > 24 THEN		l = ml - 24;	ELSE		l = ml - exc;	END IF;  END IF;  IF family(net) = 6 THEN	if exc > 48 THEN		l = ml - 48;	ELSE		l = ml - exc;	END IF;  END IF;  RETURN (2^l)-1;END $$;
+select split_cidr_count('192.168.0.0/16'::cidr,24);
+CREATE OR REPLACE FUNCTION split_cidr_count(net cidr, exc integer) RETURNS BIGINT    LANGUAGE plpgsql    AS $$DECLARE  l integer;  ml integer;BEGINml = masklen(net);  IF family(net) = 4 THEN	if exc > 24 THEN		l = 24 - ml;	ELSE		l = exc - ml;	END IF;  END IF;  IF family(net) = 6 THEN	if exc > 48 THEN		l = 48 - ml;	ELSE		l = exc - ml;	END IF;  END IF;  RETURN (2^l)-1;END $$;
+select split_cidr_count('192.168.0.0/16'::cidr,24);
+select split_cidr('192.168.0.0/16'::cidr,24);
+CREATE OR REPLACE FUNCTION split_cidr_count(net cidr, exc integer) RETURNS BIGINT    LANGUAGE plpgsql    AS $$DECLARE  l integer;  ml integer;BEGINml = masklen(net);  IF family(net) = 4 THEN	if exc > 24 THEN		l = 24 - ml;	ELSE		l = exc - ml;	END IF;  END IF;  IF family(net) = 6 THEN	if exc > 48 THEN		l = 48 - ml;	ELSE		l = exc - ml;	END IF;  END IF;  RETURN (2^l)-1;END $$;
+select split_cidr_count('192.168.0.0/16'::cidr,24);
+select split_cidr_count('192.168.0.0/16'::cidr,17);
+select split_cidr_count('192.168.0.0/16'::cidr,16);
+CREATE OR REPLACE FUNCTION split_cidr_count(net cidr, exc integer) RETURNS BIGINT    LANGUAGE plpgsql    AS $$DECLARE  l integer;  ml integer;BEGINml = masklen(net);  IF family(net) = 4 THEN	if exc > 24 THEN		l = 24 - ml;	ELSE		l = exc - ml;	END IF;  END IF;  IF family(net) = 6 THEN	if exc > 48 THEN		l = 48 - ml;	ELSE		l = exc - ml;	END IF;  END IF;  RETURN (2^(l+1))-1;END $$;
+select split_cidr_count('192.168.0.0/16'::cidr,16);
+select split_cidr_count('192.168.0.0/16'::cidr,17);
+select split_cidr_count('192.168.0.0/16'::cidr,18);
+select split_cidr_count('192.168.0.0/16'::cidr,24);
+select split_cidr_count('2001:DB8::/32'::cidr,33);
+select split_cidr_count('2001:DB8::/32'::cidr,48);
+select split_cidr('2001:DB8::/32'::cidr,48);
+select split_cidr('2001:DB8::/32'::cidr,48);
+explain analyze select "IP Prefix" as subnet, "Max Length" as maxlen,split_cidr_count("IP Prefix","Max Length") from rpki_signed_routes ;
+select "IP Prefix" as subnet, "Max Length" as maxlen,split_cidr_count("IP Prefix","Max Length") from rpki_signed_routes group by 1,2;
+select "IP Prefix" as subnet, "Max Length" as maxlen,split_cidr_count("IP Prefix","Max Length") from rpki_signed_routes group by 1,2 order by 3 desc limit 10;
+select "IP Prefix" as subnet, "Max Length" as maxlen,split_cidr_count("IP Prefix","Max Length") from rpki_signed_routes group by 1,2 order by 3 desc limit 25;
+\e
+select "IP Prefix" as subnet, "Max Length" as maxlen,split_cidr_count("IP Prefix","Max Length") from rpki_signed_routesgroup by 1,2 order by 3 desc limit 25;
+select "IP Prefix" as subnet, "Max Length" as maxlen,split_cidr_count("IP Prefix","Max Length") from rpki_signed_routesgroup by 1,2 order by 3 desc limit 25;
+select "IP Prefix" as subnet, "Max Length" as maxlen,split_cidr_count("IP Prefix","Max Length") from rpki_signed_routesgroup by 1,2 order by 3 desc limit 25;
+\e
+select "IP Prefix" as subnet, "Max Length" as maxlen,split_cidr_count("IP Prefix","Max Length") from rpki_signed_routeswhere family("IP Prefix")=4group by 1,2 order by 3 desc limit 25;
+select "ASN","IP Prefix" as subnet, "Max Length" as maxlen,split_cidr_count("IP Prefix","Max Length") from rpki_signed_routesgroup by 1,2,3 order by 4 desc limit 25;
+select array_accum("ASN"),"IP Prefix" as subnet, "Max Length" as maxlen,split_cidr_count("IP Prefix","Max Length") from rpki_signed_routesgroup by 2,3 order by 4 desc limit 25;
+select array_accum("ASN") as asns,"IP Prefix" as subnet, "Max Length" as maxlen,split_cidr_count("IP Prefix","Max Length") from rpki_signed_routesgroup by 2,3 order by 4 desc limit 25;
+\df array*
+\df array_a*
+select array_agg("ASN") as asns,"IP Prefix" as subnet, "Max Length" as maxlen,split_cidr_count("IP Prefix","Max Length") from rpki_signed_routesgroup by 2,3 order by 4 desc limit 25;
+\e
+select array_agg("ASN") as asns,"IP Prefix" as subnet, "Max Length" as maxlen,split_cidr_count("IP Prefix","Max Length") from rpki_signed_routeswhere family("IP Prefix")=4group by 2,3 order by 4 desc limit 25;
+select array_agg("ASN") as asns,"IP Prefix" as subnet, "Max Length" as maxlen,split_cidr_count("IP Prefix","Max Length") from rpki_signed_routeswhere family("IP Prefix")=4group by 2,3 order by 4 desc limit 10;
+\d+
+select count(*) from rpki_signed_routes;
+select count(*) from routes;
+\d+ routes
+\d+ rpki_signed_routes
+\d+ rir_allocations 
+select family(prefix),count(*) from routes group by 1;
+select family(prefix),count(distinct prefix) from routes group by 1;
+select family("IP Prefix"),"Trust Anchor",count(distinct "IP Prefix") from routes group by 1,2;
+\d+ rpki_signed_routes
+select family("IP Prefix"),"Trust Anchor",count(distinct "IP Prefix") from rpki_signed_routes group by 1,2;
+select family("IP Prefix"),"Trust Anchor",count(distinct "IP Prefix") from rpki_signed_routes group by 1,2 order by 1,2;
+select family("IP Prefix"),"Trust Anchor",count(distinct "IP Prefix") from rpki_signed_routes group by 1,2 order by 2,1;
+\e
+select family("IP Prefix"),"Trust Anchor",count(distinct "IP Prefix")from rpki_signed_routesgroup by 1,2 order by 2,1;
+select family("IP Prefix"),"Trust Anchor",count(distinct "IP Prefix")from rpki_signed_routesgroup by 1,2 order by 2,1;
+\d
+\d+
+select * from rir_allocations ;
+select array_agg("ASN") as asns,"IP Prefix" as subnet, "Max Length" as maxlen,split_cidr_count("IP Prefix","Max Length") from rpki_signed_routeswhere family("IP Prefix")=4group by 2,3 order by 4 desc limit 10;
+select array_agg("ASN") as asns,"IP Prefix" as subnet, "Max Length" as maxlen,split_cidr_count("IP Prefix","Max Length") from rpki_signed_routeswhere family("IP Prefix")=4group by 2,3 order by 4 desc limit 10;
+\e
+select	"IP Prefix" as subnet,	"Max Length" as maxlen,	split_cidr_count("IP Prefix","Max Length"),	COALESCE(count(distinct Y.prefix)from rpki_signed_routes X left join routes Yon Y.prefix << X."IP Prefix" and masklen(Y.prefix) <= X."Max Length"group by 1,2;);
+\e
+select	"IP Prefix" as subnet,	"Max Length" as maxlen,	split_cidr_count("IP Prefix","Max Length"),	COALESCE(count(distinct Y.prefix),0)from rpki_signed_routes X left join routes Yon Y.prefix << X."IP Prefix" and masklen(Y.prefix) <= X."Max Length"group by 1,2;
+explain analyze select	"IP Prefix" as subnet,	"Max Length" as maxlen,	split_cidr_count("IP Prefix","Max Length"),	COALESCE(count(distinct Y.prefix),0)from rpki_signed_routes X left join routes Yon Y.prefix << X."IP Prefix" and masklen(Y.prefix) <= X."Max Length"group by 1,2;
+\d+ routes
+\d+ rpki_signed_routes
+explain analyze select	"IP Prefix" as subnet,	"Max Length" as maxlen,	split_cidr_count("IP Prefix","Max Length"),	COALESCE(count(distinct Y.prefix),0)from rpki_signed_routes X left join routes Yon Y.prefix = X."IP Prefix" and masklen(Y.prefix) = X."Max Length"group by 1,2;
+explain analyze select	"IP Prefix" as subnet,	"Max Length" as maxlen,	split_cidr_count("IP Prefix","Max Length"),	COALESCE(count(distinct Y.prefix),0)from rpki_signed_routes X left join routes Yon Y.prefix << X."IP Prefix" and masklen(Y.prefix) <= X."Max Length"group by 1,2;
+\d+ rpki_signed_routes
+create index on rpki_signed_routes("Max Length");
+explain analyze select	"IP Prefix" as subnet,	"Max Length" as maxlen,	split_cidr_count("IP Prefix","Max Length"),	COALESCE(count(distinct Y.prefix),0)from rpki_signed_routes X left join routes Yon Y.prefix << X."IP Prefix" and masklen(Y.prefix) <= X."Max Length"group by 1,2;
+drop index on rpki_signed_routes("Max Length");
+\d+ rpki_signed_routes
+drop index "rpki_signed_routes_Max Length_idx";
+create index on rpki_signed_routes using gist("IP Prefix" inet_ops,"Max Length");
+CREATE EXTENSION btree_gist;
+create index on rpki_signed_routes using gist("IP Prefix" inet_ops, "Max Length");
+explain analyze select	"IP Prefix" as subnet,	"Max Length" as maxlen,	split_cidr_count("IP Prefix","Max Length"),	COALESCE(count(distinct Y.prefix),0)from rpki_signed_routes X left join routes Yon Y.prefix << X."IP Prefix" and masklen(Y.prefix) <= X."Max Length"group by 1,2;
+\d+ 
+\d+ rpki_signed_routes
+drop index "rpki_signed_routes_IP Prefix_Max Length_idx";
+create materialized view route_rpki_subnet_counts as select	"IP Prefix" as subnet,	"Max Length" as maxlen,	split_cidr_count("IP Prefix","Max Length"),	COALESCE(count(distinct Y.prefix),0)from rpki_signed_routes X left join routes Yon Y.prefix << X."IP Prefix" and masklen(Y.prefix) <= X."Max Length"group by 1,2;
+\e
+create materialized view route_rpki_subnet_counts as select	"IP Prefix" as subnet,	"Max Length" as maxlen,	split_cidr_count("IP Prefix","Max Length") as expanded_count,	COALESCE(count(distinct Y.prefix),0) as routed_countfrom rpki_signed_routes X left join routes Yon Y.prefix << X."IP Prefix" and masklen(Y.prefix) <= X."Max Length"group by 1,2;
+\d+
+select * from route_rpki_subnet_counts ;
+select * from routes limit 1;
+select	"IP Prefix" as subnet,	"Max Length" as maxlen,	split_cidr_count("IP Prefix","Max Length") as expanded_count,	COALESCE(count(distinct Y.prefix),0) as routed_countfrom rpki_signed_routes X left join routes Yon Y.prefix << X."IP Prefix" and masklen(Y.prefix) <= X."Max Length" where Y.prefix='1.0.0.0/24'::cidrgroup by 1,2;
+select * from route_rpki_subnet_counts ;
+select	"IP Prefix" as subnet,	"Max Length" as maxlen,	split_cidr_count("IP Prefix","Max Length") as expanded_count,	COALESCE(count(distinct Y.prefix),0) as routed_countfrom rpki_signed_routes X left join routes Yon Y.prefix <<= X."IP Prefix" and masklen(Y.prefix) <= X."Max Length" where Y.prefix='1.0.0.0/24'::cidrgroup by 1,2;
+select	"IP Prefix" as subnet,	"Max Length" as maxlen,	split_cidr_count("IP Prefix","Max Length") as expanded_count,	COALESCE(count(distinct Y.prefix),0) as routed_countfrom rpki_signed_routes X left join routes Yon Y.prefix <<= X."IP Prefix" and masklen(Y.prefix) <= X."Max Length" where Y.prefix << '1.0.0.0/8'::cidrgroup by 1,2;
+select	"IP Prefix" as subnet,	"Max Length" as maxlen,	split_cidr_count("IP Prefix","Max Length") as expanded_count,	COALESCE(count(distinct Y.prefix),0) as routed_countfrom rpki_signed_routes X left join routes Yon Y.prefix <<= X."IP Prefix" and masklen(Y.prefix) <= X."Max Length" where Y.prefix << '1.0.0.0/16'::cidrgroup by 1,2;
+drop materialized view route_rpki_subnet_counts;
+create table _route_rpki_subnet_counts as select	"IP Prefix" as subnet,	"Max Length" as maxlen,	split_cidr_count("IP Prefix","Max Length") as expanded_count,	COALESCE(count(distinct Y.prefix),0) as routed_countfrom rpki_signed_routes X left join routes Yon Y.prefix << X."IP Prefix" and masklen(Y.prefix) <= X."Max Length" group by 1,2;
+create table _route_rpki_subnet_counts as select	"IP Prefix" as subnet,	"Max Length" as maxlen,	split_cidr_count("IP Prefix","Max Length") as expanded_count,	COALESCE(count(distinct Y.prefix),0) as routed_countfrom rpki_signed_routes X left join routes Yon Y.prefix <<= X."IP Prefix" and masklen(Y.prefix) <= X."Max Length" group by 1,2;
+select * from _route_rpki_subnet_counts ;
+\d+ _route_rpki_subnet_counts
+create index on _route_rpki_subnet_counts using gist (subnet inet_ops);
+alter table _route_rpki_subnet_counts add column cc_iso text;
+\d+ 
+\d+ _geocode_subnet_data
+\d+ _route_rpki_subnet_counts
+alter table _route_rpki_subnet_counts add column economy_iso character varying(2);
+\d+ _route_rpki_subnet_counts
+create index on _route_rpki_subnet_counts (rir);
+create index on _route_rpki_subnet_counts (economy_iso);
+update _route_rpki_subnet_counts A set rir=B.rir from _geocode_subnet_data B where A.subnet <<= B.prefix;
+select * from _route_rpki_subnet_counts where rir is null;
+\d+ _geocode_subnet_data
+update _route_rpki_subnet_counts A set economy_iso=B.economy_iso from _geocode_subnet_data B where A.subnet <<= B.prefix;
+select * from _route_rpki_subnet_counts where economy_iso is null;
+select * from _route_rpki_subnet_counts where economy_iso is null limit 1;
+select * from _geocode_subnet_data where prefix = '5.35.0.0/19'::cidr;
+select * from _geocode_subnet_data where '5.35.0.0/19'::cidr << prefix;
+select * from _geocode_subnet_data where prefix << '5.35.0.0/16'::cidr;
+select * from _geocode_subnet_data where prefix = '5.35.0.0/19'::cidr;
+select * from _geocode_subnet_data where prefix << '5.35.0.0/16'::cidr;
+select * from _route_rpki_subnet_counts where economy_iso is null limit 1;
+select * from _route_rpki_subnet_counts where economy_iso is null limit 10;
+select * from _geocode_subnet_data where prefix = '5.35.0.0/19'::cidr;
+select * from _geocode_subnet_data where prefix = '5.35.0.0/19';
+select * from _geocode_subnet_data where prefix = '5.35.0.0/20';
+select * from _geocode_subnet_data where prefix >> '5.35.0.0/20';
+select * from _geocode_subnet_data where prefix << '5.35.0.0/19';
+select * from _route_rpki_subnet_counts where subnet = '5.35.0.0/19';
+select rir,sum(expanded_count) as "ROA Coverage",sum(routed_count) as "Global Routes" from _route_rpki_subnet_counts group by 1;
+\e
+select	rir,	sum(expanded_count) as "ROA Coverage",	sum(routed_count) as "Global Routes",	100*sum(routed_count)::float/sum(expanded_count)::floatfrom _route_rpki_subnet_countsgroup by 1;
+select	ecomony_iso,	sum(expanded_count) as "ROA Coverage",	sum(routed_count) as "Global Routes",	100*sum(routed_count)::float/sum(expanded_count)::floatfrom _route_rpki_subnet_countsgroup by 1;
+\d+ +rou
+\d+ _route_rpki_subnet_counts
+select	economy_iso,	sum(expanded_count) as "ROA Coverage",	sum(routed_count) as "Global Routes",	100*sum(routed_count)::float/sum(expanded_count)::floatfrom _route_rpki_subnet_countsgroup by 1;
+select	rir,	sum(expanded_count) as "ROA Coverage",	sum(routed_count) as "Global Routes",	100*sum(routed_count)::float/sum(expanded_count)::floatfrom _route_rpki_subnet_countsgroup by 1;
+select	rir,	sum(expanded_count) as "ROA Coverage",	sum(routed_count) as "Global Routes",	100*sum(routed_count)::float/sum(expanded_count)::floatfrom _route_rpki_subnet_countsgroup by 1;
+\e
+select	rir,	sum(expanded_count) as "ROA Coverage",	sum(routed_count) as "Global Routes",	TO_CHAR(	100*sum(routed_count)::float/sum(expanded_count)::float	'fm00D00%') as "BCP185 Compliance"from _route_rpki_subnet_countsgroup by 1;
+select	rir,	sum(expanded_count) as "ROA Coverage",	sum(routed_count) as "Global Routes",	TO_CHAR(	100*sum(routed_count)::float/sum(expanded_count)::float,	'fm00D00%') as "BCP185 Compliance"from _route_rpki_subnet_countsgroup by 1;
+select	rir,	sum(expanded_count) as "ROA Coverage",	sum(routed_count) as "Global Routes",	TO_CHAR(	100*sum(routed_count)::float/sum(expanded_count)::float,	'fm00D0i00%') as "BCP185 Compliance"from _route_rpki_subnet_countsgroup by 1;
+\e
+select	rir,	sum(expanded_count) as "ROA Coverage",	sum(routed_count) as "Global Routes",	TO_CHAR(	100*sum(routed_count)::float/sum(expanded_count)::float,	'fm00D0000%') as "BCP185 Compliance"from _route_rpki_subnet_countsgroup by 1;
+select	rir,	sum(expanded_count) as "ROA Coverage",	sum(routed_count) as "Global Routes",	TO_CHAR(	100*sum(routed_count)::float/sum(expanded_count)::float,	'fm000D0000%') as "BCP185 Compliance"from _route_rpki_subnet_countsgroup by 1;
+\e
+select	rir,	sum(expanded_count) as "ROA Coverage",	sum(routed_count) as "Global Routes",	TO_CHAR(	100*sum(routed_count)::float/sum(expanded_count)::float,	'fm999D0000%') as "BCP185 Compliance"from _route_rpki_subnet_countsgroup by 1;
+select	rir,	sum(expanded_count) as "ROA Coverage",	sum(routed_count) as "Global Routes",	TO_CHAR(	100*sum(routed_count)::float/sum(expanded_count)::float,	'fm999D0000%') as "BCP185 Compliance"from _route_rpki_subnet_countsgroup by 1;
+\e
+select	rir,	sum(expanded_count) as "ROA Coverage",	sum(routed_count) as "Global Routes",	TO_CHAR(	100*sum(routed_count)::float/sum(expanded_count)::float,	'fm00D00%') as "BCP185 Compliance"from _route_rpki_subnet_countsgroup by 1;
+\e
+select	rir,	sum(expanded_count) as "ROA Coverage",	sum(routed_count) as "Global Routes",	TO_CHAR(	100*sum(routed_count)::float/sum(expanded_count)::float,	'fm00D00%') as "BCP185 Compliance"from _route_rpki_subnet_counts where rir is not nullgroup by 1UNIONselect	'Global',	sum(expanded_count) as "ROA Coverage",	sum(routed_count) as "Global Routes",	TO_CHAR(	100*sum(routed_count)::float/sum(expanded_count)::float,	'fm00D00%') as "BCP185 Compliance"from _route_rpki_subnet_counts;
+\e
+select	rir,	sum(expanded_count) as "ROA Coverage",	sum(routed_count) as "Global Routes",	TO_CHAR(	100*sum(routed_count)::float/sum(expanded_count)::float,	'fm00D00%') as "BCP185 Compliance"from _route_rpki_subnet_counts where rir is not nullgroup by 1UNIONselect	'Global',	sum(expanded_count) as "ROA Coverage",	sum(routed_count) as "Global Routes",	TO_CHAR(	100*sum(routed_count)::float/sum(expanded_count)::float,	'fm00D00%') as "BCP185 Compliance"from _route_rpki_subnet_counts;
+create view report_bcp185_by_rir as select	rir,	sum(expanded_count) as "ROA Coverage",	sum(routed_count) as "Global Routes",	TO_CHAR(	100*sum(routed_count)::float/sum(expanded_count)::float,	'fm00D00%') as "BCP185 Compliance"from _route_rpki_subnet_counts where rir is not nullgroup by 1UNIONselect	'Global',	sum(expanded_count) as "ROA Coverage",	sum(routed_count) as "Global Routes",	TO_CHAR(	100*sum(routed_count)::float/sum(expanded_count)::float,	'fm00D00%') as "BCP185 Compliance"from _route_rpki_subnet_counts;
+select * from report_bcp185_by_rir order by 1;
+select * from report_bcp185_by_rir order by 2;
+create view report_bcp185_by_rir as select	rir,	sum(expanded_count) as "ROA Coverage",	sum(routed_count) as "Global Routes",	TO_CHAR(	100*sum(routed_count)::float/sum(expanded_count)::float,	'fm00D00%') as "BCP185 Compliance"from _route_rpki_subnet_counts where rir is not nullgroup by 1UNIONselect	'Global',	sum(expanded_count) as "ROA Coverage",	sum(routed_count) as "Global Routes",	TO_CHAR(	100*sum(routed_count)::float/sum(expanded_count)::float,	'fm00D00%') as "BCP185 Compliance"from _route_rpki_subnet_counts;
+\e
+create view report_bcp185_by_iso as select	economy_iso,	sum(expanded_count) as "ROA Coverage",	sum(routed_count) as "Global Routes",	TO_CHAR(	100*sum(routed_count)::float/sum(expanded_count)::float,	'fm00D00%') as "BCP185 Compliance"from _route_rpki_subnet_counts where rir is not nullgroup by 1UNIONselect	'Global',	sum(expanded_count) as "ROA Coverage",	sum(routed_count) as "Global Routes",	TO_CHAR(	100*sum(routed_count)::float/sum(expanded_count)::float,	'fm00D00%') as "BCP185 Compliance"from _route_rpki_subnet_counts;
+select * from report_bcp185_by_iso;
+drop view report_bcp185_by_iso; create view report_bcp185_by_iso as select	economy_iso,	sum(expanded_count) as "ROA Coverage",	sum(routed_count) as "Global Routes",	TO_CHAR(	100*sum(routed_count)::float/sum(expanded_count)::float,	'fm000D00%') as "BCP185 Compliance"from _route_rpki_subnet_counts where rir is not nullgroup by 1UNIONselect	'Global',	sum(expanded_count) as "ROA Coverage",	sum(routed_count) as "Global Routes",	TO_CHAR(	100*sum(routed_count)::float/sum(expanded_count)::float,	'fm000D00%') as "BCP185 Compliance"from _route_rpki_subnet_counts;
+select * from report_bcp185_by_iso;
+select * from report_bcp185_by_iso where ("Global Routes"/"ROA Coverage") > 0.5;
+select * from report_bcp185_by_iso where ("Global Routes"/"ROA Coverage") > 0.75;
+select * from report_bcp185_by_iso where ("Global Routes"/"ROA Coverage") > 0.80;
+select * from report_bcp185_by_iso where ("Global Routes"/"ROA Coverage") > 0.80 and economy_iso!='';
+\e
+select * from report_bcp185_by_iso where("Global Routes"/"ROA Coverage") > 0.80 and economy_iso!='';
+select * from report_bcp185_by_iso where("Global Routes"/"ROA Coverage") > 0.80 and economy_iso!='';
+select * from report_bcp185_by_iso where("Global Routes"/"ROA Coverage") < 0.001 and economy_iso!='';
+select * from report_bcp185_by_iso where("Global Routes"/"ROA Coverage") < 0.001 and economy_iso!='' order by 2 desc limit 10;
+select * from report_bcp185_by_iso where("Global Routes"/"ROA Coverage") < 0.001 and economy_iso!='' order by 2 desc limit 25;
+\e
+select * from report_bcp185_by_iso where("Global Routes"/"ROA Coverage") < 0.0001 and economy_iso!=''order by 2 desc limit 25;
+select * from report_bcp185_by_iso where("Global Routes"/"ROA Coverage") < 0.00005 and economy_iso!=''order by 2 desc limit 25;
+select * from report_bcp185_by_iso where("Global Routes"/"ROA Coverage") < 0.00005 and economy_iso!=''order by 2 desc limit 25;
+\e
+select * from report_bcp185_by_iso where("Global Routes"/"ROA Coverage") < 0.00005 and economy_iso!=''and "Global Routes" > 10order by 2 desc limit 25;
+\e
+select * from report_bcp185_by_iso where("Global Routes"/"ROA Coverage") < 0.00005and economy_iso!=''and "Global Routes" > 10order by 2 desc limit 25;
+select * from report_bcp185_by_iso where("Global Routes"/"ROA Coverage") < 0.00005and economy_iso!=''and "Global Routes" > 10order by 2 desc;
+select rir,economy_iso from _geocode_subnet_data ;
+select rir,economy_iso from _geocode_subnet_data group by 1,2;
+create table _geocode_rir_economy as select rir,economy_iso from _geocode_subnet_data group by 1,2;
+select * from report_bcp185_by_iso where("Global Routes"/"ROA Coverage") < 0.00005and economy_iso!=''and "Global Routes" > 10 and economy_iso in (select economy_iso from _geocode_subnet_data where rir='apnic')order by 2 desc;
+select * from report_bcp185_by_iso where("Global Routes"/"ROA Coverage") < 0.00005and economy_iso!=''and "Global Routes" > 10 and economy_iso in (select economy_iso from _geocode_subnet_data where rir='apnic')order by 2 desc;
+\e
+select * from report_bcp185_by_iso whereeconomy_iso in (select economy_iso from _geocode_subnet_data where rir='apnic')order by 2 desclimit 25;
+select * from report_bcp185_by_iso whereeconomy_iso in (select economy_iso from _geocode_subnet_data where rir='apnic')order by 2 desclimit 25;
+select * from report_bcp185_by_iso whereeconomy_iso in (select economy_iso from _geocode_rir_economy where rir='apnic')order by 2 desclimit 25;
+select * from _geocode_rir_economy;
+select * from _geocode_rir_economy where rir='apnic';
+create view report_bcp185_by_iso as select	economy_iso,	sum(expanded_count) as "ROA Coverage",	sum(routed_count) as "Global Routes",	TO_CHAR(	100*sum(routed_count)::float/sum(expanded_count)::float,	'fm000D00%') as "BCP185 Compliance"from _route_rpki_subnet_counts where rir is not nullgroup by 1UNIONselect	'Global',	sum(expanded_count) as "ROA Coverage",	sum(routed_count) as "Global Routes",	TO_CHAR(	100*sum(routed_count)::float/sum(expanded_count)::float,	'fm000D00%') as "BCP185 Compliance"from _route_rpki_subnet_counts;
+
+create view report_bcp185_combined as select	rir,economy_iso,	sum(expanded_count) as "ROA Coverage",	sum(routed_count) as "Global Routes",	TO_CHAR(	100*sum(routed_count)::float/sum(expanded_count)::float,	'fm000D00%') as "BCP185 Compliance"from _route_rpki_subnet_countsgroup by 1,2;
+select * from report_bcp185_combined where rir='apnic';
+select * from report_bcp185_combined where rir='apnic' order by 3 desc limit 25;
+select * from report_bcp185_combined where rir='apnic' order by 3 desc limit 25;
+select * from report_bcp185_combined where rir='ripe' order by 3 desc limit 25;
+select * from report_bcp185_combined where rir='ripencc' order by 3 desc limit 25;
+\d+ 
+select * from overlapping_signed_routes ;
+\t
+select * from overlapping_signed_routes ;
+\t
+\x
+\t
+\t
+x;
+select * from overlapping_signed_routes ;
+select * from overlapping_signed_routes limit 10;
+\x
+select * from overlapping_signed_routes limit 10;
+select count(*) from overlapping_signed_routes;
+select * from report_bcp185_by_iso where("Global Routes"/"ROA Coverage") > 0.80 and economy_iso!='';
+select * from report_bcp185_by_iso where("Global Routes"/"ROA Coverage") > 0.80 and economy_iso!='';
+\e
+select * from report_bcp185_by_iso where("Global Routes"/"ROA Coverage") > 0.80 and economy_iso!=''order by 3,2 desc;
+select * from report_bcp185_by_iso where("Global Routes"/"ROA Coverage") > 0.80 and economy_iso!=''order by 3,2 desc;
+select * from report_bcp185_by_iso where("Global Routes"/"ROA Coverage") > 0.80 and economy_iso!=''order by 3,2;
+select * from report_bcp185_by_iso where("Global Routes"/"ROA Coverage") > 0.80 and economy_iso!=''order by 3 desc,2;
+select * from report_bcp185_by_iso where("Global Routes"/"ROA Coverage") > 0.80 and economy_iso!=''order by 3 desc;
+\d+
+select * from _route_rpki_subnet_counts where prefix << '100.128.0.0/9'::cidr;
+select * from _route_rpki_subnet_counts where subnet << '100.128.0.0/9'::cidr;
+select * from _route_rpki_subnet_counts where subnet <<= '100.128.0.0/9'::cidr;
+select * from _route_rpki_subnet_counts where subnet <<= '48.128.0.0/10'::cidr;
+select * from _route_rpki_subnet_counts where subnet <<= '126.64.0.0/10'::cidr;
+select family("IP Prefix"),"Trust Anchor",count(distinct "IP Prefix")from rpki_signed_routesgroup by 1,2 order by 2,1;
+select array_agg("ASN") as asns,"IP Prefix" as subnet, "Max Length" as maxlen,split_cidr_count("IP Prefix","Max Length") from rpki_signed_routeswhere family("IP Prefix")=4group by 2,3 order by 4 desc limit 10;
+select array_agg("ASN") as asns,"IP Prefix" as subnet, "Max Length" as maxlen,split_cidr_count("IP Prefix","Max Length") from rpki_signed_routeswhere family("IP Prefix")=4group by 2,3 order by 4 desc limit 25;
+select * from _route_rpki_subnet_counts where subnet << '100.128.0.0/9'::cidr;
+select * from _route_rpki_subnet_counts where subnet <<= '100.128.0.0/9'::cidr;
+select * from _route_rpki_subnet_counts where subnet <<= '48.0.0.0/9'::cidr;
+select * from _route_rpki_subnet_counts where subnet <<= '3.0.0.0/10'::cidr;
+select * from _route_rpki_subnet_counts where subnet = '3.0.0.0/10'::cidr;
+select * from _route_rpki_subnet_counts where subnet <<= '100.128.0.0/9'::cidr;
+select * from _route_rpki_subnet_counts where subnet <<= '48.0.0.0/9'::cidr;
+select * from _route_rpki_subnet_counts where subnet = '3.0.0.0/10'::cidr;
+select * from rpki_signed_routes where "ASN" = 'AS7473';
+select * from rpki_signed_routes where "ASN" = 'AS7473' and "IP Prefix" <<= '2001:c10:://32'::cidr;
+select * from rpki_signed_routes where "ASN" = 'AS7473' and "IP Prefix" << '2001:c10:://32'::cidr;
+select * from rpki_signed_routes where "ASN" = 'AS7473' and "IP Prefix" << '2001:c10::/32'::cidr;
+select * from rpki_signed_routes where "ASN" = 'AS7473' and "IP Prefix" << '2001:c10::/32'::cidr order by 2,3;
+select * from rpki_signed_routes where "ASN" = 'AS7473' and "IP Prefix" << '2001:c10::/32'::cidr order by 3;
+select * from rpki_signed_routes where "ASN" = 'AS7473' and "IP Prefix" << '2001:c10::/32'::cidr order by 3 limit 25;
+select * from rpki_signed_routes where "ASN" = 'AS7473' and "IP Prefix" << '2001:c10::/32'::cidr order by 3 limit 25 offset 275;
+select * from rpki_signed_routes where "ASN" = 'AS7473' and "IP Prefix" << '2001:c10::/32'::cidr order by 3 limit 25;
+select * from rpki_signed_routes where "ASN" = 'AS7473' and "IP Prefix" << '2001:c10::/32'::cidr order by 3 limit 25;
+\e
+select * from rpki_signed_routes where "ASN" = 'AS7473'and "IP Prefix" << '2001:c10::/32'::cidr order by 3 limit 25;
+select * from rpki_signed_routes where "ASN" = 'AS7473'and "IP Prefix" << '2001:c10::/32'::cidr order by 3 limit 25;
+select * from rpki_signed_routes where "ASN" = 'AS7473'and "IP Prefix" << '2001:c10::/32'::cidr order by 3 limit 25 offset 275;
+\q
