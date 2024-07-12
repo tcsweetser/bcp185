@@ -1,0 +1,155 @@
+# There needs to exist an 'apnic' user
+/opt/homebrew/opt/postgresql@16/bin/createuser apnic
+
+#Create DB
+/opt/homebrew/opt/postgresql@16/bin/createdb bcp185_study
+
+#Import schema
+/opt/homebrew/opt/postgresql@16/bin/psql bcp185_study < bcp185/schema.sql
+
+# INSERTING ROUTING DATA INTO routes TABLE
+# Unzip the .txt.bz2 rib file first
+# copy routes from unzipped .txt rib file in data directory of the project
+# Then copy into routes table
+
+# Although indexes may already exist in the schema, it's more efficient to drop the indexes, do the bulk insert of data with the copy command and then re-create the indexes
+
+# describe table to get index name
+\d+ routes
+
+#drop index
+drop index routes_prefix_idx;
+
+copy routes from '/Users/sofia/GitHub/bcp185/data/rib.20240207.0400.txt' (delimiter('|'));
+
+CREATE INDEX ON routes USING gist (prefix inet_ops);
+
+
+# drop indexes on rir_allocations table
+\d+ rir_allocations
+
+drop index allocated_economy_iso_idx ;
+drop index allocated_prefix_idx ;
+drop index allocated_rir_idx ;
+
+#As we won't be using extended files, we drop the extended column from the rir_allocations table
+ALTER TABLE rir_allocations DROP COLUMN extended;
+
+#Edit delegated files to remove summary lines and all lines corresponding to ASN allocations
+#For the arin file in GitHub repository, we need to remove the last field (extended) for the copy to work (Remove the string after the last |)
+#For LACNIC, the file in the GitHub repository was from Feb 7th 2004 and not 2024 so I downloaded the right file
+#I did it manually using TextEdit but it could be done using grep
+#E.g. cat delegated-arin-extended-20240207|grep -v asn > delegated-arin-20240207
+
+#Then copy into rir_allocations table
+copy rir_allocations from '/Users/sofia/GitHub/bcp185/data/delegated-afrinic-20240207' (delimiter('|'));
+copy rir_allocations from '/Users/sofia/GitHub/bcp185/data/delegated-apnic-20240207' (delimiter('|'));
+copy rir_allocations from '/Users/sofia/GitHub/bcp185/data/delegated-arin-20240207' (delimiter('|'));
+copy rir_allocations from '/Users/sofia/GitHub/bcp185/data/delegated-lacnic-20240207' (delimiter('|'));
+copy rir_allocations from '/Users/sofia/GitHub/bcp185/data/delegated-ripencc-20240207' (delimiter('|'));
+
+create index on rir_allocations using gist (prefix inet_ops);
+create index on rir_allocations using btree (rir);
+create index on rir_allocations using btree (economy_iso);
+
+drop index "rpki_signed_routes_ASN_idx" ;
+drop index "rpki_signed_routes_IP Prefix_idx" ;
+drop index "rpki_signed_routes_Trust Anchor_idx" ;
+drop index rpki_signed_routes_masklen_idx;
+
+copy rpki_signed_routes from '/Users/sofia/GitHub/bcp185/data/rpki_data_dump_20240207.csv' with csv header;
+
+create index on rpki_signed_routes using btree ("ASN");
+create index on rpki_signed_routes using btree ("Trust Anchor");
+create index on rpki_signed_routes using gist("IP Prefix" inet_ops);
+create index on rpki_signed_routes using btree (masklen("IP Prefix"));
+
+drop index overlapping_signed_routres_supernet_idx ;
+create index on overlapping_signed_routes  using gist(supernet inet_ops);
+
+#Although the table below already exists in the schema, it needs to be dropped and recreated as shown below so it's populated
+drop table _geocode_subnet_data;
+create table _geocode_subnet_data as select rir,economy_iso,set_masklen(prefix::cidr,(32-(log(size)/log(2))::integer)) as prefix from rir_allocations where family='ipv4';
+
+insert into _geocode_subnet_data select rir,economy_iso,set_masklen(prefix::cidr,size::integer) as prefix from rir_allocations where family='ipv6';
+
+create index on _geocode_subnet_data using gist(prefix inet_ops);
+create index on _geocode_subnet_data using btree (rir);
+create index on _geocode_subnet_data using btree (economy_iso);
+
+# Although the table below already exists in the schema, it needs to be dropped and recreated as shown below so it's populated.
+drop table _route_rpki_subnet_counts cascade;
+
+create table _route_rpki_subnet_counts as select "IP Prefix" as subnet, "Max Length" as maxlen, split_cidr_count("IP Prefix","Max Length") as expanded_count, COALESCE(count(distinct Y.prefix),0) as routed_count from rpki_signed_routes X left join routes Y on Y.prefix <<= X."IP Prefix" and masklen(Y.prefix) <= X."Max Length" group by 1,2;
+
+alter table _route_rpki_subnet_counts add column economy_iso character varying(2);
+alter table _route_rpki_subnet_counts add column rir text;
+CREATE INDEX ON _route_rpki_subnet_counts USING gist (subnet inet_ops);
+
+update _route_rpki_subnet_counts A set rir=B.rir from _geocode_subnet_data B where A.subnet <<= B.prefix;
+update _route_rpki_subnet_counts A set economy_iso=B.economy_iso from _geocode_subnet_data B where A.subnet <<= B.prefix;
+
+create index on _route_rpki_subnet_counts using btree (rir);
+create index on _route_rpki_subnet_counts using btree (economy_iso);
+
+CREATE VIEW public.report_bcp185_by_iso AS
+ SELECT _route_rpki_subnet_counts.economy_iso,
+    sum(_route_rpki_subnet_counts.expanded_count) AS "ROA Coverage",
+    sum(_route_rpki_subnet_counts.routed_count) AS "Global Routes",
+    to_char((((100)::double precision * (sum(_route_rpki_subnet_counts.routed_count))::double precision) / (sum(_route_rpki_subnet_counts.expanded_count))::double precision), 'fm000D00%'::text) AS "BCP185 Compliance"
+   FROM public._route_rpki_subnet_counts
+  WHERE (_route_rpki_subnet_counts.rir IS NOT NULL)
+  GROUP BY _route_rpki_subnet_counts.economy_iso
+UNION
+ SELECT 'Global'::character varying AS economy_iso,
+    sum(_route_rpki_subnet_counts.expanded_count) AS "ROA Coverage",
+    sum(_route_rpki_subnet_counts.routed_count) AS "Global Routes",
+    to_char((((100)::double precision * (sum(_route_rpki_subnet_counts.routed_count))::double precision) / (sum(_route_rpki_subnet_counts.expanded_count))::double precision), 'fm000D00%'::text) AS "BCP185 Compliance"
+   FROM public._route_rpki_subnet_counts;
+
+CREATE VIEW public.report_bcp185_by_rir AS
+ SELECT _route_rpki_subnet_counts.rir,
+    sum(_route_rpki_subnet_counts.expanded_count) AS "ROA Coverage",
+    sum(_route_rpki_subnet_counts.routed_count) AS "Global Routes",
+    to_char((((100)::double precision * (sum(_route_rpki_subnet_counts.routed_count))::double precision) / (sum(_route_rpki_subnet_counts.expanded_count))::double precision), 'fm00D00%'::text) AS "BCP185 Compliance"
+   FROM public._route_rpki_subnet_counts
+  WHERE (_route_rpki_subnet_counts.rir IS NOT NULL)
+  GROUP BY _route_rpki_subnet_counts.rir
+UNION
+ SELECT 'Global'::text AS rir,
+    sum(_route_rpki_subnet_counts.expanded_count) AS "ROA Coverage",
+    sum(_route_rpki_subnet_counts.routed_count) AS "Global Routes",
+    to_char((((100)::double precision * (sum(_route_rpki_subnet_counts.routed_count))::double precision) / (sum(_route_rpki_subnet_counts.expanded_count))::double precision), 'fm00D00%'::text) AS "BCP185 Compliance"
+   FROM public._route_rpki_subnet_counts;
+
+CREATE VIEW public.report_bcp185_by_rir_by_pref_fam AS
+ SELECT _route_rpki_subnet_counts.rir, family(_route_rpki_subnet_counts.subnet),
+    sum(_route_rpki_subnet_counts.expanded_count) AS "ROA Coverage",
+    sum(_route_rpki_subnet_counts.routed_count) AS "Global Routes",
+    to_char((((100)::double precision * (sum(_route_rpki_subnet_counts.routed_count))::double precision) / (sum(_route_rpki_subnet_counts.expanded_count))::double precision), 'fm00D00%'::text) AS "BCP185 Compliance"
+   FROM public._route_rpki_subnet_counts
+  WHERE (_route_rpki_subnet_counts.rir IS NOT NULL)
+  GROUP BY _route_rpki_subnet_counts.rir, family(_route_rpki_subnet_counts.subnet)
+UNION
+ SELECT 'Global'::text AS rir, family(_route_rpki_subnet_counts.subnet),
+    sum(_route_rpki_subnet_counts.expanded_count) AS "ROA Coverage",
+    sum(_route_rpki_subnet_counts.routed_count) AS "Global Routes",
+    to_char((((100)::double precision * (sum(_route_rpki_subnet_counts.routed_count))::double precision) / (sum(_route_rpki_subnet_counts.expanded_count))::double precision), 'fm00D00%'::text) AS "BCP185 Compliance"
+   FROM public._route_rpki_subnet_counts GROUP BY family(_route_rpki_subnet_counts.subnet);
+
+CREATE VIEW public.report_bcp185_combined AS
+ SELECT _route_rpki_subnet_counts.rir,
+    _route_rpki_subnet_counts.economy_iso,
+    sum(_route_rpki_subnet_counts.expanded_count) AS "ROA Coverage",
+    sum(_route_rpki_subnet_counts.routed_count) AS "Global Routes",
+    to_char((((100)::double precision * (sum(_route_rpki_subnet_counts.routed_count))::double precision) / (sum(_route_rpki_subnet_counts.expanded_count))::double precision), 'fm000D00%'::text) AS "BCP185 Compliance"
+   FROM public._route_rpki_subnet_counts
+  GROUP BY _route_rpki_subnet_counts.rir, _route_rpki_subnet_counts.economy_iso;
+
+
+# As tables have been populated, materialised views need to be refreshed. 
+refresh materialized view overlapping_signed_routes ;
+
+#Although this table already exists in the schema, it needs to be dropped and then recreated as shown below so that it is populated.
+drop table _geocode_rir_economy;
+create table _geocode_rir_economy as select rir,economy_iso from _geocode_subnet_data group by 1,2;

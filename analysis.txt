@@ -1,0 +1,58 @@
+# ANALYSIS
+
+# ROAs for individual IPv6 addresses
+select * from rpki_signed_routes where "Max Length" = 128;
+
+# Number of origin ASes in ROAs for individual IPv6 addresses per RIR
+select "Trust Anchor",count(distinct "ASN") from rpki_signed_routes where family("IP Prefix")=6 and "Max Length" = 128 group by 1 order by 2 desc;
+
+# Number of origin ASes in ROAs for individual IPv4 addresses per RIR
+select "Trust Anchor",count(distinct "ASN") from rpki_signed_routes where family("IP Prefix")=4 and "Max Length" = 32 group by 1 order by 2 desc;
+
+# Top 10 IPv6 prefixes with the highest number of potential subnets allowed by corresponding ROAs, with their corresponding origin AS
+select "ASN","IP Prefix" as subnet, "Max Length" as maxlen,split_cidr_count("IP Prefix","Max Length") from rpki_signed_routes group by 1,2,3 order by 4 desc limit 10;
+
+# Top 10 IPv4 prefixes with the highest number of potential subnets allowed by corresponding ROAs, with their corresponding origin ASes
+select array_agg("ASN") as asns,"IP Prefix" as subnet, "Max Length" as maxlen,split_cidr_count("IP Prefix","Max Length") from rpki_signed_routes where family("IP Prefix")=4 group by 2,3 order by 4 desc limit 10;
+
+# Number of IPv4 and IPv6 prefixes covered by ROAs per RIR
+select family("IP Prefix"),"Trust Anchor",count(distinct "IP Prefix") from rpki_signed_routes group by 1,2 order by 2,1;
+
+# Number of prefixes covered by ROAs, number of prefixes in the global routing table and percentage of signed prefixes that are routed, per RIR
+select rir, sum(expanded_count) as "ROA Coverage", sum(routed_count) as "Global Routes", 100*sum(routed_count)::float/sum(expanded_count)::float from _route_rpki_subnet_counts group by 1;
+
+# Number of prefixes covered by ROAs, number of prefixes in the global routing table and percentage of signed prefixes that are routed, per economy
+select economy_iso, sum(expanded_count) as "ROA Coverage", sum(routed_count) as "Global Routes", 100*sum(routed_count)::float/sum(expanded_count)::float from _route_rpki_subnet_counts group by 1;
+#Same than above but using the report_bcp185_by_iso view
+select * from report_bcp185_by_iso order by economy_iso;
+
+#List economies with BCP185 compliance > 50%
+select * from report_bcp185_by_iso where ("Global Routes"/"ROA Coverage") > 0.5;
+
+
+#Some cross checking?
+select * from _route_rpki_subnet_counts where subnet << '100.128.0.0/9'::cidr;
+select * from _route_rpki_subnet_counts where subnet <<= '100.128.0.0/9'::cidr;
+select * from _route_rpki_subnet_counts where subnet <<= '48.0.0.0/9'::cidr;
+select * from _route_rpki_subnet_counts where subnet <<= '3.0.0.0/10'::cidr;
+select * from _route_rpki_subnet_counts where subnet = '3.0.0.0/10'::cidr;
+select * from _route_rpki_subnet_counts where subnet <<= '100.128.0.0/9'::cidr;
+select * from _route_rpki_subnet_counts where subnet <<= '48.0.0.0/9'::cidr;
+select * from _route_rpki_subnet_counts where subnet = '3.0.0.0/10'::cidr;
+
+
+select * from rpki_signed_routes where "ASN" = 'AS7473' and "IP Prefix" << '2001:c10::/32'::cidr order by 3 limit 25;
+select * from rpki_signed_routes where "ASN" = 'AS7473' and "IP Prefix" << '2001:c10::/32'::cidr order by 3 limit 25 offset 275;
+
+## My analysis
+
+#Number of distinct prefixes in ROAs that have a max length that is different from the prefix length, per address family, per RIR
+select count(distinct("IP Prefix")), family("IP Prefix"), "Trust Anchor" from rpki_signed_routes where masklen("IP Prefix") != "Max Length" group by family("IP Prefix"), "Trust Anchor" order by 1 desc;
+
+#Total number of distinct prefixes in ROAs, per address family, per RIR
+select count(distinct("IP Prefix")), family("IP Prefix"), "Trust Anchor" from rpki_signed_routes group by family("IP Prefix"), "Trust Anchor" order by 1 desc;
+
+#Compute percentage of prefixes manually from the figures from the two previous queries
+
+# BCP185 compliance per RIR per address family
+select * from report_bcp185_by_rir_by_pref_fam order by 5 desc;
